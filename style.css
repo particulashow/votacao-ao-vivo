@@ -24,6 +24,8 @@ h1 {
 .vote-container {
     display: flex;
     gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 /* Bloco de Opção */
@@ -34,6 +36,7 @@ h1 {
     padding: 20px 30px;
     text-align: center;
     transition: transform 0.3s ease;
+    width: 200px;
 }
 
 .vote:hover {
