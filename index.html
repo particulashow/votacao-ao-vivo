@@ -1,27 +1,28 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Votação ao Vivo</title>
-    <link rel="stylesheet" href="style.css">
-</head>
 <body>
-    <h1>Votação ao Vivo</h1>
-    <div class="vote-container">
-        <div class="vote">
-            <div class="vote-title">Opção A</div>
-            <div class="vote-number" id="voteA">0</div>
-        </div>
-        <div class="vote">
-            <div class="vote-title">Opção B</div>
-            <div class="vote-number" id="voteB">0</div>
-        </div>
-        <div class="vote">
-            <div class="vote-title">Opção C</div>
-            <div class="vote-number" id="voteC">0</div>
+    <div class="container">
+        <h1>Votação ao Vivo</h1>
+        <div class="vote-container">
+            <div class="vote" id="voteA-container">
+                <div class="vote-title">Opção A</div>
+                <div class="progress-bar">
+                    <div class="progress" id="progressA"></div>
+                </div>
+                <div class="vote-number" id="voteA">0%</div>
+            </div>
+            <div class="vote" id="voteB-container">
+                <div class="vote-title">Opção B</div>
+                <div class="progress-bar">
+                    <div class="progress" id="progressB"></div>
+                </div>
+                <div class="vote-number" id="voteB">0%</div>
+            </div>
+            <div class="vote" id="voteC-container">
+                <div class="vote-title">Opção C</div>
+                <div class="progress-bar">
+                    <div class="progress" id="progressC"></div>
+                </div>
+                <div class="vote-number" id="voteC">0%</div>
+            </div>
         </div>
     </div>
-    <script src="script.js"></script>
 </body>
-</html>
