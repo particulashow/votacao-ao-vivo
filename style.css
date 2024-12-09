@@ -1,146 +1,73 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Votação ao Vivo</title>
-    <style>
-        /* Estilo Geral */
-        body {
-            font-family: 'Poppins', sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background: transparent; /* Fundo transparente */
-            color: #fff;
-        }
+/* Estilo Geral */
+body {
+    font-family: 'Poppins', sans-serif;
+    background: transparent; /* Fundo transparente */
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    color: #fff;
+}
 
-        .container {
-            text-align: center;
-            width: 80%;
-            max-width: 600px;
-            background: rgba(0, 0, 0, 0.6); /* Fundo semitransparente */
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-        }
+h1 {
+    font-size: 3em;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, #ff6f91, #ff9671, #ffc75f);
+    -webkit-background-clip: text;
+    color: transparent;
+}
 
-        h1 {
-            font-size: 2.5em;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            background: linear-gradient(90deg, #ff6f91, #ff9671, #ffc75f);
-            -webkit-background-clip: text;
-            color: transparent;
-        }
+.vote-container {
+    display: flex;
+    gap: 20px;
+}
 
-        .vote-container {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
+/* Bloco de Opção */
+.vote {
+    background: rgba(0, 0, 0, 0.5); /* Fundo semitransparente */
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
+    padding: 20px 30px;
+    text-align: center;
+    transition: transform 0.3s ease;
+}
 
-        .vote {
-            background: rgba(255, 255, 255, 0.1); /* Fundo semitransparente para opções */
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-            transition: transform 0.3s ease;
-        }
+.vote:hover {
+    transform: scale(1.1);
+}
 
-        .vote:hover {
-            transform: scale(1.05);
-        }
+.vote-title {
+    font-size: 1.5em;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    color: #ffc75f;
+}
 
-        .vote-title {
-            font-size: 1.5em;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            color: #ffc75f;
-        }
+.vote-number {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #ff9671;
+}
 
-        .progress-bar {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            height: 20px;
-            overflow: hidden;
-            margin: 10px 0;
-        }
+/* Barra de Progresso */
+.progress-bar {
+    position: relative;
+    height: 15px;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    margin-top: 15px;
+    overflow: hidden;
+}
 
-        .progress {
-            background: linear-gradient(90deg, #ff6f91, #ff9671);
-            height: 100%;
-            width: 0%;
-            border-radius: 10px;
-            transition: width 0.5s ease-in-out;
-        }
-
-        .vote-number {
-            font-size: 1.2em;
-            margin-top: 5px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Votação ao Vivo</h1>
-        <div class="vote-container">
-            <div class="vote" id="voteA-container">
-                <div class="vote-title">Opção A</div>
-                <div class="progress-bar">
-                    <div class="progress" id="progressA"></div>
-                </div>
-                <div class="vote-number" id="voteA">0%</div>
-            </div>
-            <div class="vote" id="voteB-container">
-                <div class="vote-title">Opção B</div>
-                <div class="progress-bar">
-                    <div class="progress" id="progressB"></div>
-                </div>
-                <div class="vote-number" id="voteB">0%</div>
-            </div>
-            <div class="vote" id="voteC-container">
-                <div class="vote-title">Opção C</div>
-                <div class="progress-bar">
-                    <div class="progress" id="progressC"></div>
-                </div>
-                <div class="vote-number" id="voteC">0%</div>
-            </div>
-        </div>
-    </div>
-    <script>
-        // Inicializa os votos
-        const votes = { A: 0, B: 0, C: 0 };
-
-        // Atualiza a interface do utilizador
-        function updateUI() {
-            const totalVotes = votes.A + votes.B + votes.C;
-
-            const percentageA = totalVotes > 0 ? (votes.A / totalVotes) * 100 : 0;
-            const percentageB = totalVotes > 0 ? (votes.B / totalVotes) * 100 : 0;
-            const percentageC = totalVotes > 0 ? (votes.C / totalVotes) * 100 : 0;
-
-            document.getElementById('progressA').style.width = `${percentageA}%`;
-            document.getElementById('progressB').style.width = `${percentageB}%`;
-            document.getElementById('progressC').style.width = `${percentageC}%`;
-
-            document.getElementById('voteA').textContent = `${Math.round(percentageA)}%`;
-            document.getElementById('voteB').textContent = `${Math.round(percentageB)}%`;
-            document.getElementById('voteC').textContent = `${Math.round(percentageC)}%`;
-        }
-
-        // Simulação de votos para teste
-        setInterval(() => {
-            votes.A += Math.floor(Math.random() * 5);
-            votes.B += Math.floor(Math.random() * 5);
-            votes.C += Math.floor(Math.random() * 5);
-
-            updateUI();
-        }, 1000);
-    </script>
-</body>
-</html>
+.progress-bar .progress {
+    height: 100%;
+    background: linear-gradient(90deg, #ff6f91, #ff9671);
+    width: 0%; /* Alterar dinamicamente */
+    border-radius: 10px;
+    transition: width 0.5s ease;
+}
