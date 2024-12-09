@@ -1,0 +1,43 @@
+body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    color: #fff;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+}
+
+h1 {
+    font-size: 3em;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    color: #ffc75f;
+}
+
+.vote-container {
+    display: flex;
+    gap: 20px;
+}
+
+.vote {
+    background: #0f3460;
+    border-radius: 12px;
+    padding: 20px 30px;
+    text-align: center;
+    transition: transform 0.3s ease;
+}
+
+.vote-title {
+    font-size: 1.5em;
+    color: #ff9671;
+}
+
+.vote-number {
+    font-size: 2.5em;
+    font-weight: bold;
+}
