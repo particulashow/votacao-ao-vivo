@@ -1,8 +1,9 @@
-// Inicializa os votos
+// Configurações
+const streamID = "748c0ff7"; // StreamID retirado do ficheiro
 const votes = { A: 0, B: 0, C: 0 };
 
-// Conecta ao WebSocket do StreamNinja
-const socket = new WebSocket('wss://socialstream.ninja/socket');
+// Conecta ao WebSocket do StreamNinja com o streamID
+const socket = new WebSocket(`wss://socialstream.ninja/socket?streamID=${streamID}`);
 
 // Atualiza os votos e as barras de progresso
 function updateUI() {
@@ -24,15 +25,19 @@ socket.onmessage = (event) => {
     try {
         const message = JSON.parse(event.data);
 
-        // Captura o texto do comentário
-        const text = message.text?.trim().toUpperCase();
+        // Verifica se o streamID da mensagem corresponde ao esperado
+        if (message.streamID === streamID) {
+            const text = message.text?.trim().toUpperCase();
 
-        // Incrementa os votos com base no texto
-        if (text === 'A') votes.A++;
-        if (text === 'B') votes.B++;
-        if (text === 'C') votes.C++;
+            // Incrementa os votos com base no texto
+            if (text === 'A') votes.A++;
+            if (text === 'B') votes.B++;
+            if (text === 'C') votes.C++;
 
-        updateUI();
+            updateUI();
+        } else {
+            console.warn(`Mensagem ignorada. StreamID recebido: ${message.streamID}`);
+        }
     } catch (error) {
         console.error('Erro ao processar mensagem:', error);
     }
