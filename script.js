@@ -1,48 +1,70 @@
-// Configurações
-const streamID = "748c0ff7"; // StreamID retirado do ficheiro
-const votes = { A: 0, B: 0, C: 0 };
+// Configurações do WebSocket e parâmetros iniciais
+let params = new URLSearchParams(window.location.search);
+let optionALabel = params.get('optionA') || 'Opção A';
+let optionBLabel = params.get('optionB') || 'Opção B';
+let domain = params.get('domain') || 'http://localhost:3900';
 
-// Conecta ao WebSocket do StreamNinja com o streamID
-const socket = new WebSocket(`wss://socialstream.ninja/socket?streamID=${streamID}`);
+let root = am5.Root.new("chartdiv");
 
-// Atualiza os votos e as barras de progresso
-function updateUI() {
-    const totalVotes = votes.A + votes.B + votes.C;
+// Aplica o tema animado
+root.setThemes([am5themes_Animated.new(root)]);
 
-    // Atualiza os valores
-    document.getElementById('voteA').textContent = votes.A;
-    document.getElementById('voteB').textContent = votes.B;
-    document.getElementById('voteC').textContent = votes.C;
+// Cria o gráfico de pizza
+let pieChart = root.container.children.push(am5percent.PieChart.new(root, {
+  innerRadius: am5.percent(50),
+}));
 
-    // Atualiza as barras de progresso
-    document.getElementById('progressA').style.width = totalVotes > 0 ? `${(votes.A / totalVotes) * 100}%` : '0%';
-    document.getElementById('progressB').style.width = totalVotes > 0 ? `${(votes.B / totalVotes) * 100}%` : '0%';
-    document.getElementById('progressC').style.width = totalVotes > 0 ? `${(votes.C / totalVotes) * 100}%` : '0%';
+// Cria a série de dados
+let pieSeries = pieChart.series.push(am5percent.PieSeries.new(root, {
+  valueField: "value",
+  categoryField: "category",
+  alignLabels: false,
+}));
+
+// Configurações de estilo para os rótulos e fatias
+pieSeries.labels.template.setAll({
+  textType: "circular",
+  fontSize: 30,
+  fill: am5.color("#fff"),
+  fontWeight: "bold",
+});
+
+pieSeries.slices.template.setAll({
+  strokeOpacity: 0,
+});
+
+let data = [
+  { category: optionALabel, value: 1, settings: { fill: am5.color("#4caf50") } },
+  { category: optionBLabel, value: 1, settings: { fill: am5.color("#f44336") } }
+];
+
+pieSeries.data.setAll(data);
+
+// Função para atualizar os dados do gráfico
+function updateData(optionACount, optionBCount) {
+  pieSeries.data.setAll([
+    { category: optionALabel, value: optionACount > 0 ? optionACount : 0.01 },
+    { category: optionBLabel, value: optionBCount > 0 ? optionBCount : 0.01 }
+  ]);
 }
 
-// Processa mensagens recebidas do WebSocket
-socket.onmessage = (event) => {
-    try {
-        const message = JSON.parse(event.data);
+// Fetch inicial para limpar e carregar os dados
+fetch(`${domain}/clear-chat?words=${optionALabel},${optionBLabel}`)
+  .then(() => setTimeout(fetchData, 500));
 
-        // Verifica se o streamID da mensagem corresponde ao esperado
-        if (message.streamID === streamID) {
-            const text = message.text?.trim().toUpperCase();
+// Função para buscar os dados do servidor
+function fetchData() {
+  fetch(`${domain}/wordcloud`)
+    .then(response => response.json())
+    .then(data => {
+      let chatHistory = data.wordcloud.toLowerCase().split(',');
+      let optionACount = chatHistory.filter(word => word.trim() === optionALabel.toLowerCase()).length;
+      let optionBCount = chatHistory.filter(word => word.trim() === optionBLabel.toLowerCase()).length;
 
-            // Incrementa os votos com base no texto
-            if (text === 'A') votes.A++;
-            if (text === 'B') votes.B++;
-            if (text === 'C') votes.C++;
+      updateData(optionACount, optionBCount);
+    })
+    .catch(error => console.error("Erro ao buscar dados:", error));
+}
 
-            updateUI();
-        } else {
-            console.warn(`Mensagem ignorada. StreamID recebido: ${message.streamID}`);
-        }
-    } catch (error) {
-        console.error('Erro ao processar mensagem:', error);
-    }
-};
-
-// Log de conexão
-socket.onopen = () => console.log('Ligação ao WebSocket estabelecida!');
-socket.onerror = (error) => console.error('Erro no WebSocket:', error);
+// Atualiza os dados a cada 1 segundo
+setInterval(fetchData, 1000);
