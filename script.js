@@ -1,8 +1,12 @@
-// Votação Sim/Não (contagem) via wordcloud
+// Votação Sim/Não (contagem) via wordcloud (modo tolerante por frase)
 // URL params:
-// ?yes=Sim&no=Não&domain=http://localhost:3900&accent=#60a5fa&text=#ffffff&title=...
-//
-// Nota: mantém o padrão que já funciona contigo: fetch /clear-chat e /wordcloud
+// ?yes=Sim&no=Não
+// &yesKeys=S,Sim,yup,claro,obvio
+// &noKeys=N,Não,nope,nunca,zero
+// &domain=http://localhost:3900
+// &accent=#60a5fa
+// &text=#ffffff
+// &title=...&subtitle=...
 
 const params = new URLSearchParams(window.location.search);
 
@@ -14,53 +18,99 @@ const accent = decodeURIComponent(params.get('accent') || '#60a5fa');
 const text   = decodeURIComponent(params.get('text')   || '#ffffff');
 
 const titleParam = params.get('title') || 'Votação ao Vivo';
-const subtitleParam = params.get('subtitle') || 'Comentários contabilizados em tempo real';
+const subtitleParam = params.get('subtitle') || 'Conta comentários em tempo real';
 
+// Aplica cores
 document.documentElement.style.setProperty('--accent', accent);
 document.documentElement.style.setProperty('--text', text);
 
-document.getElementById('title').textContent = titleParam;
-document.getElementById('subtitle').textContent = subtitleParam;
-
-document.getElementById('yesLabelTxt').textContent = yesLabel;
-document.getElementById('noLabelTxt').textContent = noLabel;
+const $title = document.getElementById('title');
+const $subtitle = document.getElementById('subtitle');
+if ($title) $title.textContent = titleParam;
+if ($subtitle) $subtitle.textContent = subtitleParam;
 
 // ---------- helpers ----------
 function removeAccents(str) {
-  return str?.normalize("NFD")?.replace(/[\u0300-\u036f]/g, "") || "";
+  return (str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
-function safeLower(s){ return removeAccents(String(s || '')).toLowerCase(); }
-function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
-
-function isValidNumber(value) {
-  return typeof value === 'number' && !isNaN(value) && value >= 0 && value <= 10000000;
+function norm(str){
+  return removeAccents(String(str || '')).trim().toLowerCase();
 }
+function parseKeys(raw, fallback){
+  // aceita "S, Sim, yup" ou "S|Sim|yup"
+  const s = String(raw || '').trim();
+  const base = s
+    ? s.split(/[,|]/g)
+    : fallback;
 
-function safeAnimate(dataItem, key, value) {
+  return base.map(x => norm(x)).filter(Boolean);
+}
+function isValidNumber(v){
+  return typeof v === 'number' && !isNaN(v) && v >= 0 && v <= 10000000;
+}
+function safeAnimate(dataItem, key, value){
   if (!dataItem) return;
-  if (isValidNumber(value)) {
-    // amCharts não gosta de zero absoluto em certas configs
-    const v = value === 0 ? 0.00001 : value;
-    dataItem.animate({ key, to: v, duration: 650, easing: am5.ease.out(am5.ease.cubic) });
+  if (!isValidNumber(value)) return;
+  const v = value === 0 ? 0.00001 : value;
+  dataItem.animate({ key, to: v, duration: 650, easing: am5.ease.out(am5.ease.cubic) });
+}
+
+// ---------- chaves (sinónimos) ----------
+const YES_KEYS_ALL = parseKeys(params.get('yesKeys'), [yesLabel, 's', 'sim', 'yup', 'yes']);
+const NO_KEYS_ALL  = parseKeys(params.get('noKeys'),  [noLabel,  'n', 'nao', 'não', 'nope', 'no']);
+
+// separa keys por "palavra" vs "frase"
+const YES_WORD_KEYS = new Set(YES_KEYS_ALL.filter(k => !k.includes(' ')));
+const NO_WORD_KEYS  = new Set(NO_KEYS_ALL.filter(k => !k.includes(' ')));
+
+const YES_PHRASE_KEYS = YES_KEYS_ALL.filter(k => k.includes(' '));
+const NO_PHRASE_KEYS  = NO_KEYS_ALL.filter(k => k.includes(' '));
+
+// tokenização unicode (letras + números), tolerante a pontuação/emojis
+function tokenize(commentNorm){
+  // divide por tudo o que não seja letra/número (unicode)
+  // fallback simples se o browser não suportar \p{L}
+  try {
+    return commentNorm.split(/[^\p{L}\p{N}]+/gu).filter(Boolean);
+  } catch {
+    return commentNorm.split(/[^a-z0-9]+/g).filter(Boolean);
   }
 }
 
-// ---------- chart ----------
+// regra tolerante:
+// - conta se a frase contém alguma "phrase key" (substring)
+// - OU se alguma palavra do comentário coincide com "word key"
+function matchesSide(commentRaw, wordKeysSet, phraseKeysArr){
+  const c = norm(commentRaw);
+  if (!c) return false;
+
+  // primeiro frases completas (ex: "claro que sim")
+  for (const p of phraseKeysArr){
+    if (p && c.includes(p)) return true;
+  }
+
+  // depois palavras (ex: "sim", "s", "nope")
+  const tokens = tokenize(c);
+  for (const t of tokens){
+    if (wordKeysSet.has(t)) return true;
+  }
+  return false;
+}
+
+// ---------- chart (amCharts) ----------
 const root = am5.Root.new("chartdiv");
 root.setThemes([am5themes_Animated.new(root)]);
 
-// container
 const container = root.container.children.push(
   am5.Container.new(root, { width: am5.p100, height: am5.p100 })
 );
 
-// donut chart
 const chart = container.children.push(
   am5percent.PieChart.new(root, {
     innerRadius: am5.percent(62),
     radius: am5.percent(94),
     x: am5.percent(50),
-    y: am5.percent(50),
+    y: am5.percent(52),
     centerX: am5.percent(50),
     centerY: am5.percent(50)
   })
@@ -74,24 +124,23 @@ const series = chart.series.push(
   })
 );
 
+// Labels: mostram contagem (não percentagem)
 series.labels.template.setAll({
   text: "{category}: {value}",
   fill: am5.color(text),
   fontSize: 16,
-  fontWeight: "700",
-  opacity: 0.9
+  fontWeight: "800",
+  opacity: 0.92
 });
 
-series.ticks.template.setAll({
-  strokeOpacity: 0.35
-});
+series.ticks.template.setAll({ strokeOpacity: 0.35 });
 
 series.slices.template.setAll({
   strokeOpacity: 0,
   cornerRadius: 10
 });
 
-// estilo “Não” outline (mais neutro)
+// "Sim" sólido / "Não" outline neutro
 const yesFill = am5.color(accent);
 const noStroke = am5.color(text);
 
@@ -100,7 +149,7 @@ series.data.setAll([
   {
     category: yesLabel,
     value: 1,
-    settings: { fill: yesFill, fillOpacity: 0.85 }
+    settings: { fill: yesFill, fillOpacity: 0.86 }
   },
   {
     category: noLabel,
@@ -108,7 +157,7 @@ series.data.setAll([
     settings: {
       fillOpacity: 0.06,
       fill: am5.color(0xffffff),
-      strokeOpacity: 0.7,
+      strokeOpacity: 0.72,
       stroke: noStroke,
       strokeDasharray: [10, 6],
       strokeWidth: 3
@@ -116,33 +165,33 @@ series.data.setAll([
   }
 ]);
 
+// adapters para respeitar settings
 series.slices.template.adapters.add("fill", (fill, target) => {
-  const dataItem = target.dataItem;
-  const settings = dataItem?.dataContext?.settings;
-  return settings?.fill ? settings.fill : fill;
+  const s = target.dataItem?.dataContext?.settings;
+  return s?.fill ? s.fill : fill;
 });
 series.slices.template.adapters.add("fillOpacity", (op, target) => {
-  const settings = target.dataItem?.dataContext?.settings;
-  return typeof settings?.fillOpacity === 'number' ? settings.fillOpacity : op;
+  const s = target.dataItem?.dataContext?.settings;
+  return typeof s?.fillOpacity === 'number' ? s.fillOpacity : op;
 });
 series.slices.template.adapters.add("stroke", (stroke, target) => {
-  const settings = target.dataItem?.dataContext?.settings;
-  return settings?.stroke ? settings.stroke : stroke;
+  const s = target.dataItem?.dataContext?.settings;
+  return s?.stroke ? s.stroke : stroke;
 });
 series.slices.template.adapters.add("strokeOpacity", (op, target) => {
-  const settings = target.dataItem?.dataContext?.settings;
-  return typeof settings?.strokeOpacity === 'number' ? settings.strokeOpacity : op;
+  const s = target.dataItem?.dataContext?.settings;
+  return typeof s?.strokeOpacity === 'number' ? s.strokeOpacity : op;
 });
 series.slices.template.adapters.add("strokeDasharray", (dash, target) => {
-  const settings = target.dataItem?.dataContext?.settings;
-  return settings?.strokeDasharray || dash;
+  const s = target.dataItem?.dataContext?.settings;
+  return s?.strokeDasharray || dash;
 });
 series.slices.template.adapters.add("strokeWidth", (w, target) => {
-  const settings = target.dataItem?.dataContext?.settings;
-  return typeof settings?.strokeWidth === 'number' ? settings.strokeWidth : w;
+  const s = target.dataItem?.dataContext?.settings;
+  return typeof s?.strokeWidth === 'number' ? s.strokeWidth : w;
 });
 
-// texto central: total + split
+// Texto central (total)
 const centerLabel = chart.seriesContainer.children.push(
   am5.Label.new(root, {
     text: "0",
@@ -150,11 +199,10 @@ const centerLabel = chart.seriesContainer.children.push(
     centerY: am5.percent(50),
     x: am5.percent(50),
     y: am5.percent(50),
-    fontSize: 44,
+    fontSize: 46,
     fontWeight: "900",
     fill: am5.color(text),
-    textAlign: "center",
-    populateText: true
+    textAlign: "center"
   })
 );
 
@@ -165,33 +213,21 @@ const centerSub = chart.seriesContainer.children.push(
     centerY: am5.percent(50),
     x: am5.percent(50),
     y: am5.percent(50),
-    dy: 38,
+    dy: 40,
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "800",
     fill: am5.color(text),
-    opacity: 0.75,
+    opacity: 0.78,
     textAlign: "center"
   })
 );
 
-// ---------- data fetching ----------
-const YES_TOKEN = safeLower(yesLabel);
-const NO_TOKEN  = safeLower(noLabel);
-
-// limpa wordcloud para estas palavras
-fetch(`${domain}/clear-chat?words=${encodeURIComponent(yesLabel)},${encodeURIComponent(noLabel)}`)
-  .then(() => setTimeout(fetchData, 450))
-  .catch(() => setTimeout(fetchData, 450));
-
+// ---------- wordcloud ----------
 function updateUI(yesCount, noCount){
-  document.getElementById('yesCountTxt').textContent = String(yesCount);
-  document.getElementById('noCountTxt').textContent  = String(noCount);
-
   const total = yesCount + noCount;
   centerLabel.set("text", String(total));
   centerSub.set("text", `${yesLabel} ${yesCount}  •  ${noLabel} ${noCount}`);
 
-  // animação suave dos valores na série (sem resetar slices)
   const yesItem = series.dataItems[0];
   const noItem  = series.dataItems[1];
 
@@ -199,15 +235,35 @@ function updateUI(yesCount, noCount){
   safeAnimate(noItem, "valueWorking", noCount);
 }
 
+// limpa no arranque (inclui todos os sinónimos)
+const clearWords = [...new Set([
+  ...YES_KEYS_ALL,
+  ...NO_KEYS_ALL,
+  norm(yesLabel),
+  norm(noLabel)
+])].filter(Boolean).join(',');
+
+fetch(`${domain}/clear-chat?words=${encodeURIComponent(clearWords)}`)
+  .then(() => setTimeout(fetchData, 450))
+  .catch(() => setTimeout(fetchData, 450));
+
 function fetchData(){
   fetch(`${domain}/wordcloud`)
     .then(r => r.json())
     .then(data => {
-      const raw = safeLower(data.wordcloud || "");
-      const arr = raw.split(",").map(s => s.trim()).filter(Boolean);
+      // NOTA:
+      // wordcloud normalmente vem "a,b,c" mas pode trazer frases/strings completas.
+      const raw = String(data.wordcloud || '');
+      const items = raw.split(',').map(s => s.trim()).filter(Boolean);
 
-      const yesCount = arr.filter(w => w === YES_TOKEN).length;
-      const noCount  = arr.filter(w => w === NO_TOKEN).length;
+      let yesCount = 0;
+      let noCount = 0;
+
+      for (const item of items){
+        // tolerante por frase
+        if (matchesSide(item, YES_WORD_KEYS, YES_PHRASE_KEYS)) yesCount++;
+        else if (matchesSide(item, NO_WORD_KEYS, NO_PHRASE_KEYS)) noCount++;
+      }
 
       updateUI(yesCount, noCount);
     })
