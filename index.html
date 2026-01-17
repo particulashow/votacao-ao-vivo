@@ -1,14 +1,37 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt">
 <head>
-  <meta charset="UTF-8">
-  <title>Votação - Opção A ou B</title>
-  <link rel="stylesheet" href="./style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Votação - Sim / Não (Contagem)</title>
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <div id="chartdiv"></div>
+  <div class="wrap">
+    <div class="card">
+      <div class="header">
+        <div class="title" id="title">Votação ao Vivo</div>
+        <div class="subtitle" id="subtitle">Comentários contabilizados em tempo real</div>
+      </div>
 
-  <!-- Importação de bibliotecas -->
+      <div id="chartdiv"></div>
+
+      <div class="footer">
+        <div class="pill">
+          <span class="dot yes"></span>
+          <span id="yesLabelTxt">Sim</span>
+          <span class="count" id="yesCountTxt">0</span>
+        </div>
+        <div class="pill">
+          <span class="dot no"></span>
+          <span id="noLabelTxt">Não</span>
+          <span class="count" id="noCountTxt">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- amCharts -->
   <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
   <script src="https://cdn.amcharts.com/lib/5/percent.js"></script>
   <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
