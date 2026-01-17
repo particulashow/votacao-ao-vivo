@@ -1,8 +1,8 @@
-// Votação Sim/Não (contagem) via wordcloud
+// Votação Sim/Não (contagem) via wordcloud (modo tolerante por frase)
 // URL params:
 // ?yes=Sim&no=Não
-// &yesKeys=S,Sim,yup,claro
-// &noKeys=N,Não,nope,nunca
+// &yesKeys=S,Sim,yup,claro,obvio
+// &noKeys=N,Não,nope,nunca,zero
 // &domain=http://localhost:3900
 // &accent=#60a5fa
 // &text=#ffffff
@@ -24,8 +24,10 @@ const subtitleParam = params.get('subtitle') || 'Conta comentários em tempo rea
 document.documentElement.style.setProperty('--accent', accent);
 document.documentElement.style.setProperty('--text', text);
 
-document.getElementById('title').textContent = titleParam;
-document.getElementById('subtitle').textContent = subtitleParam;
+const $title = document.getElementById('title');
+const $subtitle = document.getElementById('subtitle');
+if ($title) $title.textContent = titleParam;
+if ($subtitle) $subtitle.textContent = subtitleParam;
 
 // ---------- helpers ----------
 function removeAccents(str) {
@@ -37,11 +39,11 @@ function norm(str){
 function parseKeys(raw, fallback){
   // aceita "S, Sim, yup" ou "S|Sim|yup"
   const s = String(raw || '').trim();
-  if (!s) return fallback.map(norm);
-  return s
-    .split(/[,|]/g)
-    .map(x => norm(x))
-    .filter(Boolean);
+  const base = s
+    ? s.split(/[,|]/g)
+    : fallback;
+
+  return base.map(x => norm(x)).filter(Boolean);
 }
 function isValidNumber(v){
   return typeof v === 'number' && !isNaN(v) && v >= 0 && v <= 10000000;
@@ -54,14 +56,48 @@ function safeAnimate(dataItem, key, value){
 }
 
 // ---------- chaves (sinónimos) ----------
-const YES_KEYS = parseKeys(params.get('yesKeys'), [yesLabel, 's', 'sim', 'yup', 'yes']);
-const NO_KEYS  = parseKeys(params.get('noKeys'),  [noLabel,  'n', 'nao', 'não', 'nope', 'no']);
+const YES_KEYS_ALL = parseKeys(params.get('yesKeys'), [yesLabel, 's', 'sim', 'yup', 'yes']);
+const NO_KEYS_ALL  = parseKeys(params.get('noKeys'),  [noLabel,  'n', 'nao', 'não', 'nope', 'no']);
 
-// Para debug (podes comentar)
-console.log('YES_KEYS:', YES_KEYS);
-console.log('NO_KEYS:', NO_KEYS);
+// separa keys por "palavra" vs "frase"
+const YES_WORD_KEYS = new Set(YES_KEYS_ALL.filter(k => !k.includes(' ')));
+const NO_WORD_KEYS  = new Set(NO_KEYS_ALL.filter(k => !k.includes(' ')));
 
-// ---------- chart ----------
+const YES_PHRASE_KEYS = YES_KEYS_ALL.filter(k => k.includes(' '));
+const NO_PHRASE_KEYS  = NO_KEYS_ALL.filter(k => k.includes(' '));
+
+// tokenização unicode (letras + números), tolerante a pontuação/emojis
+function tokenize(commentNorm){
+  // divide por tudo o que não seja letra/número (unicode)
+  // fallback simples se o browser não suportar \p{L}
+  try {
+    return commentNorm.split(/[^\p{L}\p{N}]+/gu).filter(Boolean);
+  } catch {
+    return commentNorm.split(/[^a-z0-9]+/g).filter(Boolean);
+  }
+}
+
+// regra tolerante:
+// - conta se a frase contém alguma "phrase key" (substring)
+// - OU se alguma palavra do comentário coincide com "word key"
+function matchesSide(commentRaw, wordKeysSet, phraseKeysArr){
+  const c = norm(commentRaw);
+  if (!c) return false;
+
+  // primeiro frases completas (ex: "claro que sim")
+  for (const p of phraseKeysArr){
+    if (p && c.includes(p)) return true;
+  }
+
+  // depois palavras (ex: "sim", "s", "nope")
+  const tokens = tokenize(c);
+  for (const t of tokens){
+    if (wordKeysSet.has(t)) return true;
+  }
+  return false;
+}
+
+// ---------- chart (amCharts) ----------
 const root = am5.Root.new("chartdiv");
 root.setThemes([am5themes_Animated.new(root)]);
 
@@ -199,10 +235,10 @@ function updateUI(yesCount, noCount){
   safeAnimate(noItem, "valueWorking", noCount);
 }
 
-// limpa no arranque (inclui todos os sinónimos para evitar “fantasmas”)
+// limpa no arranque (inclui todos os sinónimos)
 const clearWords = [...new Set([
-  ...YES_KEYS,
-  ...NO_KEYS,
+  ...YES_KEYS_ALL,
+  ...NO_KEYS_ALL,
   norm(yesLabel),
   norm(noLabel)
 ])].filter(Boolean).join(',');
@@ -215,15 +251,18 @@ function fetchData(){
   fetch(`${domain}/wordcloud`)
     .then(r => r.json())
     .then(data => {
-      const raw = norm(data.wordcloud || '');
-      const arr = raw.split(',').map(s => norm(s)).filter(Boolean);
+      // NOTA:
+      // wordcloud normalmente vem "a,b,c" mas pode trazer frases/strings completas.
+      const raw = String(data.wordcloud || '');
+      const items = raw.split(',').map(s => s.trim()).filter(Boolean);
 
       let yesCount = 0;
       let noCount = 0;
 
-      for (const token of arr){
-        if (YES_KEYS.includes(token)) yesCount++;
-        else if (NO_KEYS.includes(token)) noCount++;
+      for (const item of items){
+        // tolerante por frase
+        if (matchesSide(item, YES_WORD_KEYS, YES_PHRASE_KEYS)) yesCount++;
+        else if (matchesSide(item, NO_WORD_KEYS, NO_PHRASE_KEYS)) noCount++;
       }
 
       updateUI(yesCount, noCount);
