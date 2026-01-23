@@ -3,28 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>Votação ao Vivo (Sim/Não)</title>
+  <title>Votação Sim / Não</title>
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <div class="wrap">
     <div class="card">
 
-      <div class="top">
-        <div class="title" id="title">Votação ao vivo</div>
-        <div class="subtitle" id="subtitle">Escreve no chat: <span class="kbd" id="yesKbd">Sim</span> ou <span class="kbd" id="noKbd">Não</span></div>
+      <!-- TÍTULO (opcional via ?title= ) -->
+      <div class="top" id="top">
+        <div class="title" id="title">Qual escolhes?</div>
       </div>
 
       <div class="mid">
-        <!-- LADO YES -->
-        <div class="side" id="sideYes">
+        <!-- YES -->
+        <div class="side yes" id="sideYes">
           <div class="pill">
             <span class="dot yes"></span>
             <span class="pillText" id="yesLabel">Sim</span>
           </div>
 
           <div class="big" id="yesCount">0</div>
-          <div class="small" id="yesPct">0%</div>
 
           <div class="meter">
             <div class="fill yes" id="yesFill"></div>
@@ -33,7 +32,7 @@
 
         <!-- DONUT -->
         <div class="donutBox">
-          <svg class="donut" viewBox="0 0 120 120" aria-label="Donut votação">
+          <svg class="donut" viewBox="0 0 120 120">
             <circle class="ring track" cx="60" cy="60" r="46" />
             <circle class="ring yes" id="ringYes" cx="60" cy="60" r="46" />
           </svg>
@@ -45,24 +44,19 @@
           </div>
         </div>
 
-        <!-- LADO NO -->
-        <div class="side" id="sideNo">
+        <!-- NO -->
+        <div class="side no" id="sideNo">
           <div class="pill">
             <span class="dot no"></span>
             <span class="pillText" id="noLabel">Não</span>
           </div>
 
           <div class="big" id="noCount">0</div>
-          <div class="small" id="noPct">0%</div>
 
           <div class="meter">
             <div class="fill no" id="noFill"></div>
           </div>
         </div>
-      </div>
-
-      <div class="foot hint" id="hint">
-        Dica: podes passar sinónimos com <b>yesWords</b> e <b>noWords</b>.
       </div>
 
     </div>
