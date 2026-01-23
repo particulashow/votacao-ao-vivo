@@ -3,108 +3,135 @@ const params = new URLSearchParams(location.search);
 const pick = (...keys) => {
   for (const k of keys){
     const v = params.get(k);
-    if (v && v.trim() !== "") return v.trim();
+    if (v && String(v).trim() !== "") return String(v).trim();
   }
   return "";
 };
 
-const normalize = t =>
-  String(t||"")
+const safeHex = (v) => /^#[0-9a-fA-F]{6}$/.test(v || "") ? v : "";
+
+const normalize = (t) =>
+  String(t || "")
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g,"")
     .trim();
 
-const domain =
-  pick("domain") ||
-  location.origin.replace(/\/$/,"") ||
-  "http://localhost:3900";
+// domain
+const domain = pick("domain") || "http://localhost:3900";
 
 // labels
-const YES = pick("yes") || "Sim";
-const NO  = pick("no")  || "Não";
+const yesLabel = pick("yes") || "Sim";
+const noLabel  = pick("no")  || "Não";
 
-// título (se não vier, escondemos)
+// title opcional
 const title = pick("title","question");
-const $top = document.getElementById("top");
-if (title){
-  document.getElementById("title").textContent = title;
-}else{
-  $top.style.display = "none";
-}
+const titleRow = document.getElementById("titleRow");
+const titleEl = document.getElementById("title");
+if (title) titleEl.textContent = title;
+else titleRow.style.display = "none";
 
-// sets de palavras
-const yesWords = new Set([normalize(YES),"sim","s","yes","y","ok"]);
-const noWords  = new Set([normalize(NO),"nao","não","n","no","nop"]);
+// cores via query
+const accent = safeHex(pick("accent")) || "";
+const noColor = safeHex(pick("noColor")) || "";
+const track = safeHex(pick("track")) || "";
+const text = safeHex(pick("text")) || "";
 
-// dom
-const $yesCount = document.getElementById("yesCount");
-const $noCount  = document.getElementById("noCount");
-const $total    = document.getElementById("totalCount");
-const $leader   = document.getElementById("leaderText");
+if (accent) document.documentElement.style.setProperty("--yes", accent);
+if (noColor) document.documentElement.style.setProperty("--no", noColor);
+if (track) document.documentElement.style.setProperty("--track", track);
+if (text) document.documentElement.style.setProperty("--txt", text);
 
-const $yesFill = document.getElementById("yesFill");
-const $noFill  = document.getElementById("noFill");
-const $ringYes = document.getElementById("ringYes");
+// UI
+document.getElementById("yesLabel").textContent = yesLabel;
+document.getElementById("noLabel").textContent  = noLabel;
 
-const $sideYes = document.getElementById("sideYes");
-const $sideNo  = document.getElementById("sideNo");
+const yesCountEl = document.getElementById("yesCount");
+const noCountEl  = document.getElementById("noCount");
+const totalEl    = document.getElementById("totalCount");
+const leaderEl   = document.getElementById("leaderText");
 
-// donut
+const yesHint = document.getElementById("yesHint");
+const noHint  = document.getElementById("noHint");
+
+const leftBox  = document.getElementById("leftBox");
+const rightBox = document.getElementById("rightBox");
+
+const segYes = document.getElementById("segYes");
+
+// donut geometry
 const R = 46;
 const C = 2 * Math.PI * R;
 
-let current = { yes:0, no:0 };
+function parseCSV(s){
+  return String(s || "")
+    .split(",")
+    .map(normalize)
+    .filter(Boolean);
+}
+
+// sinónimos opcionais
+const YES_WORDS = new Set([
+  normalize(yesLabel),
+  "sim","s","yes","y","yup","ok","claro",
+  ...parseCSV(pick("yesWords"))
+]);
+
+const NO_WORDS = new Set([
+  normalize(noLabel),
+  "nao","não","n","no","nope","nah","nop",
+  ...parseCSV(pick("noWords"))
+]);
+
+let current = { yes: 0, no: 0 };
 const lerp = (a,b,t)=>a+(b-a)*t;
 
-function setLeader(yes,no){
-  $sideYes.classList.remove("leader");
-  $sideNo.classList.remove("leader");
-  $yesFill.classList.remove("leader");
-  $noFill.classList.remove("leader");
-  $ringYes.classList.remove("leader");
+function setLeader(yes, no){
+  leftBox.classList.remove("leader","yesGlow","noGlow");
+  rightBox.classList.remove("leader","yesGlow","noGlow");
+
+  yesHint.textContent = "";
+  noHint.textContent = "";
 
   if (yes > no){
-    $sideYes.classList.add("leader");
-    $yesFill.classList.add("leader");
-    $ringYes.classList.add("leader");
-    $leader.textContent = `${YES} a ganhar`;
+    leaderEl.textContent = `${yesLabel} a ganhar`;
+    leftBox.classList.add("leader","yesGlow");
+    yesHint.textContent = "A GANHAR";
   } else if (no > yes){
-    $sideNo.classList.add("leader");
-    $noFill.classList.add("leader");
-    $leader.textContent = `${NO} a ganhar`;
+    leaderEl.textContent = `${noLabel} a ganhar`;
+    rightBox.classList.add("leader","noGlow");
+    noHint.textContent = "A GANHAR";
   } else {
-    $leader.textContent = "Empate";
+    leaderEl.textContent = "Empate";
   }
 }
 
 function animateTo(target){
-  const start = {...current};
+  const start = { ...current };
   const t0 = performance.now();
   const dur = 520;
 
   function step(now){
-    const p = Math.min(1,(now-t0)/dur);
-    const e = 1 - Math.pow(1-p,3);
+    const p = Math.min(1, (now - t0) / dur);
+    const e = 1 - Math.pow(1 - p, 3);
 
-    const yes = lerp(start.yes,target.yes,e);
-    const no  = lerp(start.no,target.no,e);
-    const total = Math.max(1, yes+no);
+    const yes = lerp(start.yes, target.yes, e);
+    const no  = lerp(start.no,  target.no,  e);
 
-    $yesCount.textContent = Math.round(yes);
-    $noCount.textContent  = Math.round(no);
-    $total.textContent    = Math.round(yes+no);
+    const total = Math.max(1, yes + no);
 
-    $yesFill.style.width = `${(yes/total)*100}%`;
-    $noFill.style.width  = `${(no/total)*100}%`;
+    yesCountEl.textContent = Math.round(yes);
+    noCountEl.textContent  = Math.round(no);
+    totalEl.textContent    = Math.round(yes + no);
 
-    const dash = C * (yes/total);
-    $ringYes.style.strokeDasharray = `${dash} ${C-dash}`;
+    // donut: só 1 segmento (Sim), resto é track
+    const yesLen = C * (yes / total);
+    segYes.style.strokeDasharray = `${yesLen} ${C - yesLen}`;
 
     if (p < 1) requestAnimationFrame(step);
     else{
-      current = {...target};
-      setLeader(target.yes,target.no);
+      current = { ...target };
+      setLeader(target.yes, target.no);
     }
   }
 
@@ -113,20 +140,24 @@ function animateTo(target){
 
 async function fetchData(){
   try{
-    const res = await fetch(`${domain}/wordcloud`,{cache:"no-store"});
+    const res = await fetch(`${domain}/wordcloud`, { cache:"no-store" });
     const data = await res.json();
-    const words = (data.wordcloud||"").split(",").map(normalize);
 
-    let yes=0,no=0;
+    const words = String(data.wordcloud || "")
+      .split(",")
+      .map(normalize)
+      .filter(Boolean);
+
+    let yes = 0, no = 0;
     for (const w of words){
-      if (yesWords.has(w)) yes++;
-      else if (noWords.has(w)) no++;
+      if (YES_WORDS.has(w)) yes++;
+      else if (NO_WORDS.has(w)) no++;
     }
 
-    if (yes===current.yes && no===current.no) return;
-    animateTo({yes,no});
+    if (yes === current.yes && no === current.no) return;
+    animateTo({ yes, no });
   }catch(e){}
 }
 
 fetchData();
-setInterval(fetchData,800);
+setInterval(fetchData, 900);
