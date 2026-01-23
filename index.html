@@ -2,39 +2,71 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Votação - Sim / Não (Contagem)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Votação ao Vivo (Sim/Não)</title>
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <div class="header">
-        <div class="title" id="title">Votação ao Vivo</div>
-        <div class="subtitle" id="subtitle">Comentários contabilizados em tempo real</div>
+
+      <div class="top">
+        <div class="title" id="title">Votação ao vivo</div>
+        <div class="subtitle" id="subtitle">Escreve no chat: <span class="kbd" id="yesKbd">Sim</span> ou <span class="kbd" id="noKbd">Não</span></div>
       </div>
 
-      <div id="chartdiv"></div>
+      <div class="mid">
+        <!-- LADO YES -->
+        <div class="side" id="sideYes">
+          <div class="pill">
+            <span class="dot yes"></span>
+            <span class="pillText" id="yesLabel">Sim</span>
+          </div>
 
-      <div class="footer">
-        <div class="pill">
-          <span class="dot yes"></span>
-          <span id="yesLabelTxt">Sim</span>
-          <span class="count" id="yesCountTxt">0</span>
+          <div class="big" id="yesCount">0</div>
+          <div class="small" id="yesPct">0%</div>
+
+          <div class="meter">
+            <div class="fill yes" id="yesFill"></div>
+          </div>
         </div>
-        <div class="pill">
-          <span class="dot no"></span>
-          <span id="noLabelTxt">Não</span>
-          <span class="count" id="noCountTxt">0</span>
+
+        <!-- DONUT -->
+        <div class="donutBox">
+          <svg class="donut" viewBox="0 0 120 120" aria-label="Donut votação">
+            <circle class="ring track" cx="60" cy="60" r="46" />
+            <circle class="ring yes" id="ringYes" cx="60" cy="60" r="46" />
+          </svg>
+
+          <div class="center">
+            <div class="centerTop">TOTAL</div>
+            <div class="centerBig" id="totalCount">0</div>
+            <div class="centerSub" id="leaderText">Empate</div>
+          </div>
+        </div>
+
+        <!-- LADO NO -->
+        <div class="side" id="sideNo">
+          <div class="pill">
+            <span class="dot no"></span>
+            <span class="pillText" id="noLabel">Não</span>
+          </div>
+
+          <div class="big" id="noCount">0</div>
+          <div class="small" id="noPct">0%</div>
+
+          <div class="meter">
+            <div class="fill no" id="noFill"></div>
+          </div>
         </div>
       </div>
+
+      <div class="foot hint" id="hint">
+        Dica: podes passar sinónimos com <b>yesWords</b> e <b>noWords</b>.
+      </div>
+
     </div>
   </div>
-
-  <!-- amCharts -->
-  <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
-  <script src="https://cdn.amcharts.com/lib/5/percent.js"></script>
-  <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
 
   <script src="./script.js"></script>
 </body>
