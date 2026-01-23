@@ -3,59 +3,63 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>Votação Sim / Não</title>
+  <title>Votação (Sim / Não)</title>
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
+  <div class="overlay">
+    <div class="panel">
 
-      <!-- TÍTULO (opcional via ?title= ) -->
-      <div class="top" id="top">
+      <div class="titleRow" id="titleRow">
         <div class="title" id="title">Qual escolhes?</div>
       </div>
 
-      <div class="mid">
-        <!-- YES -->
-        <div class="side yes" id="sideYes">
-          <div class="pill">
-            <span class="dot yes"></span>
-            <span class="pillText" id="yesLabel">Sim</span>
+      <div class="content">
+        <div class="legend left" id="leftBox">
+          <div class="pill yes">
+            <span class="dot"></span>
+            <span class="label" id="yesLabel">Sim</span>
           </div>
-
-          <div class="big" id="yesCount">0</div>
-
-          <div class="meter">
-            <div class="fill yes" id="yesFill"></div>
-          </div>
+          <div class="count" id="yesCount">0</div>
+          <div class="hint" id="yesHint"></div>
         </div>
 
-        <!-- DONUT -->
-        <div class="donutBox">
-          <svg class="donut" viewBox="0 0 120 120">
-            <circle class="ring track" cx="60" cy="60" r="46" />
-            <circle class="ring yes" id="ringYes" cx="60" cy="60" r="46" />
+        <div class="donutWrap">
+          <svg class="donut" viewBox="0 0 120 120" aria-label="Gráfico de votação">
+            <defs>
+              <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="2.2" result="blur"/>
+                <feColorMatrix in="blur" type="matrix"
+                  values="1 0 0 0 0
+                          0 1 0 0 0
+                          0 0 1 0 0
+                          0 0 0 0.65 0" result="glow"/>
+                <feMerge>
+                  <feMergeNode in="glow"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+
+            <circle class="ring track" cx="60" cy="60" r="46"></circle>
+            <!-- Sim (segmento) -->
+            <circle class="ring seg yes" id="segYes" cx="60" cy="60" r="46"></circle>
           </svg>
 
           <div class="center">
-            <div class="centerTop">TOTAL</div>
-            <div class="centerBig" id="totalCount">0</div>
-            <div class="centerSub" id="leaderText">Empate</div>
+            <div class="kicker">TOTAL</div>
+            <div class="total" id="totalCount">0</div>
+            <div class="leader" id="leaderText">Empate</div>
           </div>
         </div>
 
-        <!-- NO -->
-        <div class="side no" id="sideNo">
-          <div class="pill">
-            <span class="dot no"></span>
-            <span class="pillText" id="noLabel">Não</span>
+        <div class="legend right" id="rightBox">
+          <div class="pill no">
+            <span class="dot"></span>
+            <span class="label" id="noLabel">Não</span>
           </div>
-
-          <div class="big" id="noCount">0</div>
-
-          <div class="meter">
-            <div class="fill no" id="noFill"></div>
-          </div>
+          <div class="count" id="noCount">0</div>
+          <div class="hint" id="noHint"></div>
         </div>
       </div>
 
