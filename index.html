@@ -3,66 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>Votação (Sim / Não)</title>
+  <title>Votação Circular Sim / Não</title>
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <div class="overlay">
-    <div class="panel">
 
-      <div class="titleRow" id="titleRow">
-        <div class="title" id="title">Qual escolhes?</div>
+  <div class="wrap">
+    <svg class="donut" viewBox="0 0 120 120" aria-label="Votação Sim Não">
+      <circle class="ring track" cx="60" cy="60" r="46"></circle>
+      <circle class="ring yes" id="ringYes" cx="60" cy="60" r="46"></circle>
+    </svg>
+
+    <div class="center">
+      <div class="counts">
+        <span class="yesCount" id="yesCount">0</span>
+        <span class="sep">/</span>
+        <span class="noCount" id="noCount">0</span>
       </div>
-
-      <div class="content">
-        <div class="legend left" id="leftBox">
-          <div class="pill yes">
-            <span class="dot"></span>
-            <span class="label" id="yesLabel">Sim</span>
-          </div>
-          <div class="count" id="yesCount">0</div>
-          <div class="hint" id="yesHint"></div>
-        </div>
-
-        <div class="donutWrap">
-          <svg class="donut" viewBox="0 0 120 120" aria-label="Gráfico de votação">
-            <defs>
-              <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="2.2" result="blur"/>
-                <feColorMatrix in="blur" type="matrix"
-                  values="1 0 0 0 0
-                          0 1 0 0 0
-                          0 0 1 0 0
-                          0 0 0 0.65 0" result="glow"/>
-                <feMerge>
-                  <feMergeNode in="glow"/>
-                  <feMergeNode in="SourceGraphic"/>
-                </feMerge>
-              </filter>
-            </defs>
-
-            <circle class="ring track" cx="60" cy="60" r="46"></circle>
-            <!-- Sim (segmento) -->
-            <circle class="ring seg yes" id="segYes" cx="60" cy="60" r="46"></circle>
-          </svg>
-
-          <div class="center">
-            <div class="kicker">TOTAL</div>
-            <div class="total" id="totalCount">0</div>
-            <div class="leader" id="leaderText">Empate</div>
-          </div>
-        </div>
-
-        <div class="legend right" id="rightBox">
-          <div class="pill no">
-            <span class="dot"></span>
-            <span class="label" id="noLabel">Não</span>
-          </div>
-          <div class="count" id="noCount">0</div>
-          <div class="hint" id="noHint"></div>
-        </div>
-      </div>
-
+      <div class="leader" id="leaderText">Empate</div>
     </div>
   </div>
 
