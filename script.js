@@ -1,123 +1,141 @@
-const params = new URLSearchParams(location.search);
+const params = new URLSearchParams(window.location.search);
 
-const pick = (...keys) => {
-  for (const k of keys){
-    const v = params.get(k);
-    if (v && v.trim() !== "") return v.trim();
-  }
-  return "";
-};
+const domain = (params.get("domain") || "http://localhost:3900").replace(/\/$/, "");
 
-const normalize = (t) =>
-  String(t||"")
+// labels (mantém compatibilidade com os teus params yes/no)
+const YES_LABEL = (params.get("yes") || "Sim").trim();
+const NO_LABEL  = (params.get("no")  || "Não").trim();
+
+// cores opcionais por query (se quiseres manter compatibilidade com a página de testes)
+function safeHex(v){
+  return /^#[0-9a-fA-F]{6}$/.test(v || "") ? v : "";
+}
+const accent = safeHex(params.get("accent")); // opcional
+const text   = safeHex(params.get("text"));   // opcional
+
+if (text) document.documentElement.style.setProperty("--text", text);
+// Se quiseres, podes usar accent para o track ou outra coisa. Mantive discreto:
+if (accent) document.documentElement.style.setProperty("--track", "rgba(255,255,255,.12)");
+
+// Elementos
+const elYes = document.getElementById("yesCount");
+const elNo  = document.getElementById("noCount");
+const svg = document.querySelector(".ring");
+const arcYes = document.querySelector(".arc-yes");
+const arcNo  = document.querySelector(".arc-no");
+const ringBox = document.querySelector(".ringBox");
+
+function normalize(txt){
+  return String(txt || "")
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g,"")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z\s]/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
-
-const safeHex = v => /^#[0-9a-fA-F]{6}$/.test(v||"") ? v : "";
-
-// params
-const domain = pick("domain") || "http://localhost:3900";
-
-const yesLabel = pick("yes") || "Sim";
-const noLabel  = pick("no")  || "Não";
-
-// cores opcionais
-const yesColor = safeHex(pick("accent"));
-const noColor  = safeHex(pick("noColor"));
-const track    = safeHex(pick("track"));
-const text     = safeHex(pick("text"));
-
-if (yesColor) document.documentElement.style.setProperty("--yes", yesColor);
-if (noColor)  document.documentElement.style.setProperty("--no", noColor);
-if (track)    document.documentElement.style.setProperty("--track", track);
-if (text)     document.documentElement.style.setProperty("--text", text);
-
-// dom
-const yesCountEl = document.getElementById("yesCount");
-const noCountEl  = document.getElementById("noCount");
-const leaderEl   = document.getElementById("leaderText");
-const ringYes    = document.getElementById("ringYes");
-
-// donut geometry
-const R = 46;
-const C = 2 * Math.PI * R;
-
-// vote words
-const YES_WORDS = new Set([
-  normalize(yesLabel),"sim","s","yes","y","ok"
-]);
-const NO_WORDS = new Set([
-  normalize(noLabel),"nao","não","n","no","nop"
-]);
-
-let current = { yes:0, no:0 };
-const lerp = (a,b,t)=>a+(b-a)*t;
-
-function setLeader(yes,no){
-  leaderEl.classList.remove("yes","no");
-  ringYes.classList.remove("leader");
-
-  if (yes > no){
-    leaderEl.textContent = `${yesLabel} a ganhar`;
-    leaderEl.classList.add("yes");
-    ringYes.classList.add("leader");
-  } else if (no > yes){
-    leaderEl.textContent = `${noLabel} a ganhar`;
-    leaderEl.classList.add("no");
-  } else {
-    leaderEl.textContent = "Empate";
-  }
 }
 
-function animateTo(target){
-  const start = {...current};
-  const t0 = performance.now();
-  const dur = 520;
+// Heurística robusta para “sim claro”, “Simmm”, “Não”, “Nao”, “No”
+const YES_WORDS = ["sim", "s", "yes", "y", "claro", "bora"]; // podes ajustar
+const NO_WORDS  = ["nao", "não", "no", "n", "nop", "nah"];   // podes ajustar
 
-  function step(now){
-    const p = Math.min(1,(now-t0)/dur);
-    const e = 1 - Math.pow(1-p,3);
+function isYes(v){
+  if (!v) return false;
+  // “simmm” vira “simmm” -> startsWith("sim") funciona
+  return YES_WORDS.some(w => v.startsWith(normalize(w)));
+}
+function isNo(v){
+  if (!v) return false;
+  return NO_WORDS.some(w => v.startsWith(normalize(w)));
+}
 
-    const yes = lerp(start.yes,target.yes,e);
-    const no  = lerp(start.no ,target.no ,e);
-    const total = Math.max(1, yes+no);
+// Preparar o donut (dasharray/dashoffset)
+function setupCircle(circle){
+  const r = circle.r.baseVal.value;
+  const c = 2 * Math.PI * r;
+  circle.style.strokeDasharray = `${c} ${c}`;
+  circle.style.strokeDashoffset = `${c}`;
+  return c;
+}
 
-    yesCountEl.textContent = Math.round(yes);
-    noCountEl.textContent  = Math.round(no);
+const CIRC = setupCircle(arcYes);
+setupCircle(arcNo);
 
-    const yesLen = C * (yes/total);
-    ringYes.style.strokeDasharray = `${yesLen} ${C-yesLen}`;
+// Estado para pulse apenas quando muda
+let lastYes = 0;
+let lastNo = 0;
 
-    if (p < 1) requestAnimationFrame(step);
-    else{
-      current = {...target};
-      setLeader(target.yes,target.no);
-    }
-  }
-  requestAnimationFrame(step);
+function setArc(circle, ratio){
+  // ratio: 0..1 (quanto está “cheio”)
+  const clamped = Math.max(0, Math.min(1, ratio));
+  const offset = CIRC * (1 - clamped);
+  circle.style.strokeDashoffset = `${offset}`;
+}
+
+function pulse(){
+  ringBox.classList.remove("pulse");
+  // force reflow
+  void ringBox.offsetWidth;
+  ringBox.classList.add("pulse");
+}
+
+function updateUI(yes, no){
+  elYes.textContent = yes;
+  elNo.textContent  = no;
+
+  const total = yes + no;
+  const denom = total || 1;
+
+  // ratios
+  const rYes = yes / denom;
+  const rNo  = no  / denom;
+
+  // Queremos 2 arcos no mesmo círculo.
+  // Estratégia: desenhar o SIM “por cima”, e o NÃO ocupa o restante.
+  // Para o NÃO, usamos dashoffset como se fosse o restante, mas com um truque:
+  // definimos o arco do NÃO como total - yes, e depois “rodamos” através de dashoffset.
+  // Solução simples: arco SIM representa yes, e arco NÃO representa no, mas deslocado pelo arco SIM.
+  setArc(arcYes, rYes);
+
+  // Para o NÃO: preenchimento rNo, mas começa após o segmento SIM.
+  // Offset = CIRC * (1 - rNo) + CIRC * rYes
+  const offsetNo = (CIRC * (1 - rNo)) + (CIRC * rYes);
+  arcNo.style.strokeDashoffset = `${offsetNo}`;
+
+  // pulse apenas se houve alteração real
+  if (yes !== lastYes || no !== lastNo) pulse();
+  lastYes = yes;
+  lastNo = no;
 }
 
 async function fetchData(){
-  try{
-    const res = await fetch(`${domain}/wordcloud`,{cache:"no-store"});
-    const data = await res.json();
-    const words = (data.wordcloud||"")
-      .split(",")
-      .map(normalize)
-      .filter(Boolean);
+  const res = await fetch(`${domain}/wordcloud`, { cache: "no-store" });
+  const data = await res.json();
 
-    let yes=0,no=0;
-    for(const w of words){
-      if(YES_WORDS.has(w)) yes++;
-      else if(NO_WORDS.has(w)) no++;
-    }
+  const words = String(data.wordcloud || "")
+    .split(",")
+    .map(w => normalize(w))
+    .filter(Boolean);
 
-    if(yes===current.yes && no===current.no) return;
-    animateTo({yes,no});
-  }catch(e){}
+  let yes = 0;
+  let no = 0;
+
+  for (const w of words){
+    // Prioridade: detectar sim/não no início
+    if (isYes(w)) { yes++; continue; }
+    if (isNo(w))  { no++;  continue; }
+
+    // fallback: se for exatamente “sim”/“nao” depois da normalização
+    if (w === "sim") yes++;
+    if (w === "nao") no++;
+  }
+
+  updateUI(yes, no);
 }
 
-fetchData();
-setInterval(fetchData, 900);
+// Reset inicial (mantém a lógica que tens usado)
+fetch(`${domain}/clear-chat`, { mode: "no-cors" }).catch(()=>{});
+
+// Loop
+fetchData().catch(()=>{});
+setInterval(() => fetchData().catch(()=>{}), 1000);
