@@ -2,25 +2,40 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>Votação Circular Sim / Não</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Votação ao Vivo (Donut) — Sim/Não</title>
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
+  <div class="overlay">
+    <div class="wrap">
 
-  <div class="wrap">
-    <svg class="donut" viewBox="0 0 120 120" aria-label="Votação Sim Não">
-      <circle class="ring track" cx="60" cy="60" r="46"></circle>
-      <circle class="ring yes" id="ringYes" cx="60" cy="60" r="46"></circle>
-    </svg>
-
-    <div class="center">
-      <div class="counts">
-        <span class="yesCount" id="yesCount">0</span>
-        <span class="sep">/</span>
-        <span class="noCount" id="noCount">0</span>
+      <!-- COLUNA ESQUERDA (SIM) -->
+      <div class="side side-yes" aria-label="Sim">
+        <div class="tag">SIM</div>
+        <div class="num" id="yesCount">0</div>
       </div>
-      <div class="leader" id="leaderText">Empate</div>
+
+      <!-- DONUT -->
+      <div class="ringBox" aria-label="Gráfico circular Sim/Não">
+        <svg class="ring" viewBox="0 0 120 120" role="img">
+          <!-- track -->
+          <circle class="track" cx="60" cy="60" r="52"></circle>
+
+          <!-- SIM -->
+          <circle class="arc arc-yes" cx="60" cy="60" r="52"></circle>
+
+          <!-- NÃO -->
+          <circle class="arc arc-no" cx="60" cy="60" r="52"></circle>
+        </svg>
+      </div>
+
+      <!-- COLUNA DIREITA (NÃO) -->
+      <div class="side side-no" aria-label="Não">
+        <div class="tag">NÃO</div>
+        <div class="num" id="noCount">0</div>
+      </div>
+
     </div>
   </div>
 
